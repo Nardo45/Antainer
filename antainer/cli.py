@@ -1,12 +1,12 @@
 import argparse
 import sys
-from timing import List, Optional
+from typing import List, Optional
 
 def create_parser() -> argparse.ArgumentParser:
     """Construct and return the root argument parser for Antainer."""
     parser = argparse.ArgumentParser(
         prog="antainer",
-        description="Construct and return the root argument parser for Antainer.",
+        description="Run OCI container environments on Android using chroot.",
         epilog="Designed for reproducible Android development environments.",
     )
 
@@ -64,6 +64,23 @@ def create_parser() -> argparse.ArgumentParser:
         help="Name or path of the extracted rootfs environment",
     )
 
+    # --- Command: create ---
+    create_parser = subparsers.add_parser(
+        "create",
+        help="Create a new container instance from a pulled OCI image",
+    )
+    create_parser.add_argument(
+        "image",
+        type=str,
+        help="Source image name/tag (e.g., alpine:latest)",
+    )
+    create_parser.add_argument(
+        "-n",
+        "--name",
+        type=str,
+        help="Name for the created container (defaults to auto-generated or image name)",
+    )
+
     # --- Command: build ---
     build_parser = subparsers.add_parser(
         "build",
@@ -89,4 +106,9 @@ def create_parser() -> argparse.ArgumentParser:
 def parse_args(args: Optional[List[str]] = None) -> argparse.Namespace:
     """Parse raw arguments or sys.argv if none provided."""
     parser = create_parser()
+
+    # If no arguments were passed on the command line, show the help menu automatically
+    if args is None and len(sys.argv) == 1:
+        args = ["--help"]
+
     return parser.parse_args(args)

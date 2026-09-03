@@ -1,3 +1,4 @@
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -6,6 +7,54 @@ from dataclasses import dataclass
 class CheckResult:
     available: bool
     message: str
+
+def is_android_environment() -> bool:
+    """Check if the execution environment is an Android system."""
+    return os.path.exists("/system/build.prop") or os.path.exists("/data/local")
+
+def check_unprivileged_execution() -> CheckResult:
+    """
+    Checks if Antainer was executed as an unprivileged user, not directly as root/sudo.
+    Returns available=True if running unprivileged, and available=False if running as root
+    or if the execution identity cannot be safely determined.
+    """
+    is_root_user: bool | None = None
+
+    # Primary POSIX effective UID check
+    if hasattr(os, "geteuid"):
+        is_root_user = (os.geteuid() == 0)
+    # Secondary fallback to real UID
+    elif hasattr(os, "getuid"):
+        is_root_user = (os.getuid() == 0)
+    
+    # Indeterminate state guard
+    if is_root_user is None:
+        user_env = os.environ.get("USER", "") or os.environ.get("LOGNAME", "")
+        if user_env == "root":
+            is_root_user = True
+        else:
+            return CheckResult(
+                available=False,
+                message=(
+                    "Unable to verify process privilege level on this platform.\n"
+                    "Antainer requires a POSIX user environment to ensure safe execution."
+                ),
+            )
+    
+    if is_root_user:
+        return CheckResult(
+            available=False,
+            message=(
+                "Antainer was launched directly as root/sudo.\n"
+                "For system safety, Antainer must be run as an unprivileged user.\n"
+                "It will request root privileges via 'su' internally when needed."
+            ),
+        )
+    
+    return CheckResult(
+        available=True,
+        message="Running as an unprivileged user.",
+    )
 
 def check_chroot_availability() -> CheckResult:
     """
