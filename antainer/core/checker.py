@@ -1,7 +1,7 @@
 import os
 import shutil
-import subprocess
 from dataclasses import dataclass
+from antainer.core.exec import run_command
 
 @dataclass
 class CheckResult:
@@ -26,7 +26,7 @@ def check_unprivileged_execution() -> CheckResult:
     # Secondary fallback to real UID
     elif hasattr(os, "getuid"):
         is_root_user = (os.getuid() == 0)
-    
+
     # Indeterminate state guard
     if is_root_user is None:
         user_env = os.environ.get("USER", "") or os.environ.get("LOGNAME", "")
@@ -40,17 +40,17 @@ def check_unprivileged_execution() -> CheckResult:
                     "Antainer requires a POSIX user environment to ensure safe execution."
                 ),
             )
-    
+
     if is_root_user:
         return CheckResult(
             available=False,
             message=(
                 "Antainer was launched directly as root/sudo.\n"
                 "For system safety, Antainer must be run as an unprivileged user.\n"
-                "It will request root privileges via 'su' internally when needed."
+                "It will request root privileges via 'su' or 'sudo' internally when needed."
             ),
         )
-    
+
     return CheckResult(
         available=True,
         message="Running as an unprivileged user.",
@@ -61,7 +61,7 @@ def check_chroot_availability() -> CheckResult:
     Check if root access (via su) and the chroot binary are available on the device.
     Does not enforce that the current Python script itself is run as root.
     """
-    # 1. Verify 'su' executable exists in PATH
+    # Verify 'su' executable exists in PATH
     if shutil.which("su") is None:
         return CheckResult(
             available=False,
@@ -72,52 +72,29 @@ def check_chroot_availability() -> CheckResult:
             ),
         )
 
-    # 2. Test if 'su' can actually grant execution access
-    try:
-        res = subprocess.run(
-            ["su", "-c", "id -u"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if res.returncode != 0 or res.stdout.strip() != "0":
-            return CheckResult(
-                available=False,
-                message=(
-                    "Found 'su', but root access was denied or failed to respond.\n"
-                    "Please ensure root permissions are granted to your shell/terminal emulator.\n"
-                    "Non-rooted support via PRoot will be available in future updates."
-                ),
-            )
-    except (subprocess.SubprocessError, OSError):
+    # Test if 'su' can actually grant execution access
+    res = run_command("id -u", is_android=is_android_environment, requires_root=True)
+
+    if res.returncode != 0 or res.stdout.strip() != "0":
         return CheckResult(
             available=False,
             message=(
-                "Failed to execute 'su' to verify root privileges.\n"
+                "Found 'su', but root access was denied or failed to respond.\n"
+                "Please ensure root permissions are granted to your shell/terminal emulator.\n"
                 "Non-rooted support via PRoot will be available in future updates."
             ),
         )
 
-    # 3. Check for 'chroot' binary availability via su
-    try:
-        chroot_check = subprocess.run(
-            ["su", "-c", "which chroot"],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        if chroot_check.returncode != 0 or not chroot_check.stdout.strip():
-            return CheckResult(
-                available=False,
-                message=(
-                    "Root access is present, but the 'chroot' binary could not be located in PATH.\n"
-                    "Ensure BusyBox or equivalent userland utilities are installed."
-                ),
-            )
-    except (subprocess.SubprocessError, OSError):
+    # Check for 'chroot' binary availability via su
+    chroot_check = run_command("which chroot", is_android=is_android_environment, requires_root=True)
+
+    if chroot_check.returncode != 0 or not chroot_check.stdout.strip():
         return CheckResult(
             available=False,
-            message="Error while checking for 'chroot' binary via su.",
+            message=(
+                "Root access is present, but the 'chroot' binary could not be located in PATH.\n"
+                "Ensure BusyBox or equivalent userland utilities are installed."
+            ),
         )
 
     return CheckResult(

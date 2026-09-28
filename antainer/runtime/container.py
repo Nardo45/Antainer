@@ -2,7 +2,7 @@ import json
 import os
 import time
 from typing import Any, Dict
-from antainer.core import get_context
+from antainer.core import get_context, run_command
 from antainer.storage import copy_dir_tree, ensure_dir, write_json_file
 
 def create_container(image_name: str, container_name: str | None = None) -> Dict[str, Any]:
@@ -23,10 +23,11 @@ def create_container(image_name: str, container_name: str | None = None) -> Dict
     if os.path.exists(container_dir):
         raise FileExistsError(f"Container '{target_name}' already exists at {container_dir}.")
 
-    ensure_dir(container_dir, is_android=ctx.is_android)
+    needs_root = container_dir.startswith("/data/local")
+    ensure_dir(container_dir, is_android=ctx.is_android, requires_root=needs_root)
 
     target_rootfs = os.path.join(container_dir, "rootfs")
-    copy_dir_tree(source_image_dir, target_rootfs, is_android=ctx.is_android)
+    copy_dir_tree(source_image_dir, target_rootfs, is_android=ctx.is_android, requires_root=needs_root)
 
     config: Dict[str, Any] = {
         "name": target_name,
@@ -37,6 +38,6 @@ def create_container(image_name: str, container_name: str | None = None) -> Dict
     }
 
     config_path = os.path.join(container_dir, "config.json")
-    write_json_file(config_path, config, is_android=ctx.is_android)
+    write_json_file(config_path, config, is_android=ctx.is_android, requires_root=needs_root)
 
     return config

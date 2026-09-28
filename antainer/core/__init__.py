@@ -11,6 +11,9 @@ from antainer.core.context import (
     get_context,
     init_context,
 )
+from antainer.core.exec import (
+    run_command,
+)
 
 __all__ = [
     "CheckResult",
@@ -19,4 +22,5 @@ __all__ = [
     "is_android_environment",
     "get_context",
     "init_context",
+    "run_command",
 ]

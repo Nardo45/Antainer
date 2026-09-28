@@ -69,7 +69,9 @@ def pull_and_extract_oci_image(image_ref: str, custom_name: str | None = None) -
     output_dir = os.path.join(ctx.images_dir, target_name)
     staging_dir = get_staging_dir()
 
-    ensure_dir(output_dir, is_android=ctx.is_android)
+    # Flag if destination path requires elevated permissions on Android
+    needs_root = output_dir.startswith("/data/local")
+    ensure_dir(output_dir, is_android=ctx.is_android, requires_root=needs_root)
 
     print(f"[Antainer] Connecting to registry: {registry}")
     token = get_bearer_token(registry, repository)
@@ -134,7 +136,7 @@ def pull_and_extract_oci_image(image_ref: str, custom_name: str | None = None) -
         with urllib.request.urlopen(blob_req) as response, open(staging_tar_path, "wb") as out_file:
             out_file.write(response.read())
 
-        extract_layer(staging_tar_path, output_dir, is_android=ctx.is_android)
+        extract_layer(staging_tar_path, output_dir, is_android=ctx.is_android, requires_root=needs_root)
 
         if os.path.exists(staging_tar_path):
             os.remove(staging_tar_path)

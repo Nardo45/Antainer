@@ -17,7 +17,7 @@ def resolve_storage_base(
         else:
             print("[Antainer] Error: Android environment detected, but '/data/local' is inaccessible.")
             sys.exit(1)
-    
+
     # Case 2: Standard user on non-Android or unrooted system
     else:
         home = os.environ.get("HOME", os.path.expanduser("~"))
@@ -25,7 +25,7 @@ def resolve_storage_base(
         if not home or home in ("/", "//", "/root"):
             print("[Antainer] Error: Unable to determine a valid home directory for storage.")
             sys.exit(1)
-        
+
         base_path = os.path.join(home, ".antainer")
 
     target_dir = os.path.join(base_path, subfolder)
