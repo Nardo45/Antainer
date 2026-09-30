@@ -3,7 +3,6 @@
 from antainer.handlers.commands import (
     handle_pull,
     handle_enter,
-    handle_clean,
     handle_create,
     handle_build,
 )
@@ -11,7 +10,6 @@ from antainer.handlers.commands import (
 COMMAND_HANDLERS = {
     "pull": handle_pull,
     "enter": handle_enter,
-    "clean": handle_clean,
     "create": handle_create,
     "build": handle_build,
 }

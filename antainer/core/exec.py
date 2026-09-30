@@ -6,6 +6,7 @@ def run_command(
     is_android: bool = False,
     requires_root: bool = False,
     check: bool = True,
+    interactive: bool = False,
 ) -> subprocess.CompletedProcess:
     """
     Central command executor for Antainer.
@@ -18,6 +19,7 @@ def run_command(
         is_android: Whether Antainer is running in an Android environment.
         requires_root: Whether the command requires elevated (root) privileges.
         check: If True, raises PermissionError / RuntimeError on non-zero exit codes.
+        interactive:
 
     Returns:
         subprocess.CompletedProcess containing stdout and stderr.
@@ -38,6 +40,11 @@ def run_command(
             exec_args = cmd
         else:
             exec_args = ["/bin/sh", "-c", cmd_str]
+
+    if interactive:
+        # Pass standard I/O streams directly to the terminal
+        res = subprocess.run(exec_args)
+        return res
 
     # Execute process
     res = subprocess.run(exec_args, capture_output=True, text=True)

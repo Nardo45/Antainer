@@ -1,7 +1,7 @@
 import argparse
 import sys
 from antainer.registry import pull_and_extract_oci_image
-from antainer.runtime import create_container
+from antainer.runtime import create_container, enter_environment
 
 def handle_pull(args: argparse.Namespace) -> None:
     print(f"[Antainer] Pulling image: {args.image}")
@@ -29,10 +29,14 @@ def handle_create(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 def handle_enter(args: argparse.Namespace) -> None:
-    print(f"[Antainer] Entering target: {args.target} with shell {args.shell}")
-
-def handle_clean(args: argparse.Namespace) -> None:
-    print(f"[Antainer] Cleaning target: {args.target}")
+    try:
+        enter_environment(
+            target=args.target,
+            shell=args.shell,
+        )
+    except Exception as e:
+        print(f"[Antainer] Error entering target environment: {e}")
+        sys.exit(1)
 
 def handle_build(args: argparse.Namespace) -> None:
     print(f"[Antainer] Building tag '{args.tag}' from file '{args.file}'")

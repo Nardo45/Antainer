@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tarfile
+from contextlib import contextmanager
 from antainer.core.exec import run_command
 
 def get_staging_dir() -> str:
@@ -58,3 +59,29 @@ def write_json_file(filepath: str, data: dict, is_android: bool = False, require
         with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
+@contextmanager
+def mount_pseudo_filesystems(rootfs_path: str, is_android: bool = False, requires_root: bool = False):
+    """
+    Context manager that mounts /proc, /sys, /dev, and /dev/pts into the rootfs,
+    and guarantees lazy unmounting (umount -l) upon exit.
+    """
+    mount_points = [
+        ("proc", os.path.join(rootfs_path, "proc"), "-t proc proc"),
+        ("sys", os.path.join(rootfs_path, "sys"), "-t sysfs sys"),
+        ("dev", os.path.join(rootfs_path, "dev"), "-o bind /dev"),
+        ("devpts", os.path.join(rootfs_path, "dev/pts"), "-t devpts devpts"),
+    ]
+
+    mounted = []
+    try:
+        for name, target_dir, flags in mount_points:
+            ensure_dir(target_dir, is_android=is_android, requires_root=requires_root)
+            cmd = f"mount {flags} '{target_dir}'"
+            run_command(cmd, is_android=is_android, requires_root=requires_root, check=True)
+            mounted.append(target_dir)
+        yield
+    finally:
+        # Unmount in reverse order
+        for target_dir in reversed(mounted):
+            umount_cmd = f"umount -l '{target_dir}'"
+            run_command(umount_cmd, is_android=is_android, requires_root=requires_root, check=True)
