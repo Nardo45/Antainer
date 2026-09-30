@@ -19,7 +19,7 @@ def run_command(
         is_android: Whether Antainer is running in an Android environment.
         requires_root: Whether the command requires elevated (root) privileges.
         check: If True, raises PermissionError / RuntimeError on non-zero exit codes.
-        interactive:
+        interactive: Whether to attach standard I/O directly to the terminal for interactive sessions.
 
     Returns:
         subprocess.CompletedProcess containing stdout and stderr.

@@ -1,49 +1,38 @@
 # Antainer
 
-Antainer is a lightweight solution designed to execute standard Containerfile and Dockerfile container environments natively on Android using chroot, with potential proot support planned for future iterations.
+Antainer is a lightweight container runtime designed to pull OCI images, manage isolated container instances, and execute containerized environments directly on Android devices using `chroot`.
 
-The primary goal of this project is to enable local software development directly on Android devices without relying on virtual machines or remote development servers.
-
-> **Note:** This project is in early active development. API, CLI, and internal structures are subject to change.
+The primary objective of Antainer is to provide an efficient local container workflow on Android without requiring heavy virtual machines or remote development instances.
 
 ---
 
-## Features and Goals
+## Key Capabilities
 
-* **Root-First Execution:** Leverages `chroot` for zero-overhead, near-native performance and direct hardware/kernel access on rooted Android devices.
-* **Standard Container Target:** Engineered around `Dockerfile` and `Containerfile` workflows.
-* **On-Device Toolchains:** Enables compiling, building, and running developer environments directly on Android hardware.
-* **Optional `proot` Support:** Future support for `proot` is under consideration to explore non-rooted sandboxing and learning opportunities.
+- **OCI Registry Integration:** Direct pulling and extraction of multi-architecture OCI images (e.g., Docker Hub, GHCR).
+- **Zero-Overhead Execution:** Leverages `chroot` and kernel namespaces for native speed and direct system resource access.
+- **Automated Storage Management:** Manages storage roots, configuration tracking, and container directory trees transparently.
+- **Android Privilege Escalation:** Unified command execution interface that handles root (`su`) elevation when accessing restricted paths such as `/data/local`.
+- **Mount Lifecycle Safety:** Automatically mounts and lazy-unmounts essential pseudo-filesystems (`/proc`, `/sys`, `/dev`, `/dev/pts`) during interactive sessions.
 
 ---
 
 ## Prerequisites
 
-* **Rooted Android Device:** Root access via Magisk, KernelSU, APatch, or equivalent.
-* **Environment Utilities:** A working installation of `busybox` or modern Android userland utilities containing `chroot`.
-* **Storage:** Sufficient space on internal storage (`/data/local/tmp` or similar) to store target rootfs layouts.
+- **Android System:** Android device rooted via Magisk, KernelSU, APatch, or equivalent.
+- **Userland Tools:** Termux or similar terminal emulator equipped with `python3` (3.10+), `tar`, and `su`.
+- **Storage:** Read/write access to internal storage paths (such as `/data/local/.antainer`).
 
 ---
 
-## Project Structure and Concept
+## Architecture Overview
 
-Antainer bootstraps a minimal target Linux rootfs (e.g., Alpine, Debian, Arch) onto Android's filesystem, configures essential pseudo-filesystems, and enters the chroot environment:
+Antainer abstracts container operation through a structured module hierarchy:
 
-1. Target environment directory allocation.
-2. Mounting core filesystems (`/proc`, `/sys`, `/dev`, `/dev/pts`).
-3. Execution of the `chroot` command targeting the isolated environment.
-4. Clean teardown and unmounting upon exit.
-
----
-
-## Roadmap
-
-- [ ] Core rootfs bootstrapping and directory layout scripts
-- [ ] Mount lifecycle management (mount/unmount hooks for `/proc`, `/sys`, `/dev`)
-- [ ] Container image/rootfs pull and unpack automation
-- [ ] User and permission mapping within the chroot environment
-- [ ] Dockerfile/Containerfile directive parsing or compatibility execution
-- [ ] Experimental `proot` backend exploration
+1. **Core (`antainer.core`):** Provides central context model and process execution capabilities, managing privileged Android execution, interactive shells, and command output handling.
+2. **Registry (`antainer.registry`):** Fetches OCI image manifests, resolves target architectures (ARM64, x86_64, etc.), downloads blob layers, and extracts them to local storage.
+3. **Runtime (`antainer.runtime`):** Instantiates runnable container instances, manages metadata configurations, handles target environment entry, and manages pseudo-filesystem mounts.
+4. **Storage (`antainer.storage`):** Centralizes cross-platform filesystem operations, storage directory creation, directory copying, layer extraction, and rootfs management.
+5. **Handlers (`antainer.handlers`):** Command-line dispatchers mapping user inputs to runtime workflows.
 
 ---
 
